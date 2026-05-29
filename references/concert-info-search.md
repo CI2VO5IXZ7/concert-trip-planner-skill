@@ -109,3 +109,15 @@ If historical duration data cannot be found, use **start time + 2.5 hours** as t
 - Always label it as **estimate**.
 - Do not present it as a confirmed duration.
 - Use it only after topic-level and artist-level historical searches fail.
+
+---
+
+## User-Provided Concert Info
+
+If the user directly states the concert venue, date, start time, and/or end time instead of asking you to search:
+
+- **Skip the search steps** for any field the user has provided.
+- **Do not fabricate** source URLs or citations for user-provided data.
+- **Mark every user-provided field** in the output with: `用户直接确认，未做独立搜索验证`
+- Still search for any fields the user did **not** provide (e.g. if user gives venue but not end time, search for historical duration).
+- If the user-provided info conflicts with anything found in search, flag the conflict and ask the user to confirm.

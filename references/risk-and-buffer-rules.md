@@ -51,7 +51,10 @@ Use this structure:
 > **REJECT / NO VIABLE PLAN**
 > - Reason: <short factual reason>
 > - Failed constraint: <which buffer / timing / route constraint fails>
+> - **Earliest viable arrival: XX:XX** via <方案简述> — 供参考，如可放宽截止时间可采用此方案
 > - Safe next step: <what user must change to make a plan possible; try widening the return window or considering nearby-city transfers>
+
+**Earliest viable arrival is mandatory.** After declaring no-viable-plan, always calculate and state the earliest time the user *could* arrive at the destination under any safe transport combination, even if it exceeds their deadline. This lets the user decide whether to relax the constraint rather than having to ask.
 
 ## No-Fabrication Guardrail
 
