@@ -46,7 +46,7 @@ curl -s "https://restapi.amap.com/v3/geocode/geo?address={地址}&city={城市}&
 
 **Extract location:**
 ```bash
-curl -s "https://restapi.amap.com/v3/geocode/geo?address=郑州奥林匹克体育中心&city=郑州&key={AMAP_KEY}" \
+curl -s "https://restapi.amap.com/v3/geocode/geo?address={场馆名称}&city={城市}&key={AMAP_KEY}" \
   | python3 -c "import json,sys; g=json.load(sys.stdin)['geocodes'][0]; print(g['formatted_address'], g['location'])"
 ```
 
@@ -70,7 +70,7 @@ curl -s "https://restapi.amap.com/v3/direction/driving?origin={lng,lat}&destinat
 
 **Extract duration and distance:**
 ```bash
-curl -s "https://restapi.amap.com/v3/direction/driving?origin=113.537479,34.743276&destination=113.766353,34.748107&key={AMAP_KEY}" \
+curl -s "https://restapi.amap.com/v3/direction/driving?origin={出发lng,lat}&destination={目的地lng,lat}&key={AMAP_KEY}" \
   | python3 -c "
 import json,sys
 r=json.load(sys.stdin)['route']['paths'][0]
@@ -98,7 +98,7 @@ curl -s "https://restapi.amap.com/v3/direction/transit/integrated?origin={lng,la
 
 **Extract top-3 transit options:**
 ```bash
-curl -s "https://restapi.amap.com/v3/direction/transit/integrated?origin=113.766353,34.748107&destination=113.537479,34.743276&city=郑州&nightflag=0&key={AMAP_KEY}" \
+curl -s "https://restapi.amap.com/v3/direction/transit/integrated?origin={出发lng,lat}&destination={目的地lng,lat}&city={城市}&nightflag=0&key={AMAP_KEY}" \
   | python3 -c "
 import json,sys
 transits=json.load(sys.stdin)['route']['transits']

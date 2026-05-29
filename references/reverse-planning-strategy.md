@@ -37,12 +37,12 @@ If return is not viable, tell the user early. This avoids wasting planning time 
 
 ## Example Case Study
 
-Scenario: 太原 → 泰州, must arrive before next-day 8:00 after a concert. This is a reverse-planning example only; do not invent specific train numbers, flight numbers, prices, or real-time availability.
+Scenario: 城市A → 城市B, must arrive before next-day 8:00 after a concert. This is a reverse-planning example only; do not invent specific train numbers, flight numbers, prices, or real-time availability.
 
-1. 步骤1: 搜索 8:00 前到泰州的车次 / 航班 / feasible transport arrivals. Focus on all routes that can reach 泰州 before the deadline.
-2. 步骤2: 发现这些 arrivals may mainly come from 南京 / 徐州 / 上海方向. Treat these as source corridors, not guaranteed tickets.
-3. 步骤3: 搜索 太原 → 南京 / 徐州 的高铁、飞机、夜间交通或组合交通. Also check whether 上海方向 is still realistic after post-concert departure time.
-4. 步骤4: 评估中转可行性. For 南京 / 徐州, check whether station or airport overnight waiting is allowed, whether the first morning connection reaches 泰州 before 8:00, and whether the train / airport / local buffers are met.
+1. 步骤1: 搜索 8:00 前到城市B的车次 / 航班 / feasible transport arrivals. Focus on all routes that can reach 城市B before the deadline.
+2. 步骤2: 发现这些 arrivals may mainly come from certain hub corridors. Treat these as source corridors, not guaranteed tickets.
+3. 步骤3: 搜索 城市A → 各中转枢纽 的高铁、飞机、夜间交通或组合交通. Also check which corridors are still realistic after post-concert departure time.
+4. 步骤4: 评估中转可行性. Check whether station or airport overnight waiting is allowed, whether the first morning connection reaches 城市B before the deadline, and whether all buffers are met.
 5. 步骤5: 给出多段联运方案或明确不可行. If the puzzle requires impossible timing, zero slack, or unavailable overnight waiting, output **REJECT / NO VIABLE PLAN** with the failed constraint.
 
 ## Multi-Leg Risk Escalation

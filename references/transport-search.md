@@ -44,7 +44,7 @@ Optional parameters:
 
 ### Outbound train example
 ```
-/flyai search-train --origin 泰州 --destination 郑州 --dep-date 2026-05-30 --sort-type 6 --dep-hour-start 08 --dep-hour-end 14 --arr-hour-end 18
+/flyai search-train --origin {出发城市} --destination {目的地城市} --dep-date {YYYY-MM-DD} --sort-type 6 --dep-hour-start 08 --dep-hour-end 14 --arr-hour-end 18
 ```
 
 ### Return train — Two-Pass Mandatory Rule
@@ -73,7 +73,7 @@ Optional parameters mirror train search (no `--seat-class-name`).
 
 ### Flight example
 ```
-/flyai search-flight --origin 郑州 --destination 南京 --dep-date 2026-05-31 --sort-type 6 --dep-hour-start 05 --dep-hour-end 09
+/flyai search-flight --origin {出发城市} --destination {目的地城市} --dep-date {YYYY-MM-DD} --sort-type 6 --dep-hour-start 05 --dep-hour-end 09
 ```
 
 ## 12306 Skill — Fallback Queries
@@ -87,8 +87,8 @@ When FlyAI returns no results or the connection is unavailable, use 12306 skill 
 
 ### 12306 fallback examples
 ```
-帮我查 2026-05-31 郑州东 到 泰州 的高铁，出发时间06:00到10:00之间，按出发时间排序
-帮我查 2026-05-30 泰州 到 郑州东 的高铁，上午所有班次
+帮我查 {日期} {出发站} 到 {到达站} 的高铁，出发时间06:00到10:00之间，按出发时间排序
+帮我查 {日期} {出发站} 到 {到达站} 的高铁，上午所有班次
 ```
 
 ## Ranking Logic
