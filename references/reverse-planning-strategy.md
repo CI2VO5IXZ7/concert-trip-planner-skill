@@ -16,6 +16,18 @@ Core idea: do not start from the concert city only. Start from the required dest
 
 Only output a plan when every leg has a realistic connection. If reverse planning also fails, then use **REJECT / NO VIABLE PLAN** instead of forcing a route.
 
+## Bottleneck Detection (Do This Before Listing Options)
+
+When many candidate routes all arrive at the destination at the **same time**, they are usually funneling through one shared final-leg train/flight. Detect this before presenting a list — otherwise you create a false sense of "many choices."
+
+Procedure:
+1. Group all return candidates by their **final-leg transport number** and arrival time.
+2. If 3+ routes share the same final leg (e.g. all end on the same 北京南→泰州 train arriving 17:42), that leg is the **bottleneck**.
+3. Report it directly: "瓶颈在 {车次}，到达 {时间}；提前从演唱会城市出发不会改善，因为所有路径都汇聚到这班。"
+4. Only escalate (search flights, other corridors, other destination airports) if the bottleneck arrival misses the deadline.
+
+This was observed repeatedly: 太原 / 沈阳 / 成都 all funneled through a single final train regardless of departure time. Naming the bottleneck once is clearer and faster than listing ten routes with identical arrival times.
+
 ## Transfer Hub Selection Rules
 
 - 距离优先: 中转城市距离演唱会城市越近越好, because it reduces the first post-concert leg and lowers missed-connection risk.

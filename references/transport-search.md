@@ -17,14 +17,29 @@ If FlyAI returns a `体验模式` warning in results, note that output may be in
 ## Tool Priority
 
 1. **FlyAI CLI** (`flyai search-train` / `flyai search-flight`) — primary, real-time data, verified station names
-2. **12306 skill** — fallback if FlyAI returns no results or is unavailable; use natural language queries
+2. **12306 skill** — fallback **only in an interactive session where the user can scan a QR code to log in**. See the reliability note below.
 3. **WebSearch** — last resort only, for supplementary info (bus schedules, ride share); never use for train/flight station name verification
+
+## ⚠️ Data Reliability — Read First
+
+Two hard-learned limits that change how you must report results:
+
+**1. FlyAI 体验模式 (trial mode) returns incomplete data.**
+- Empty results (`智慧交通结果为空`) or single-digit result counts do **NOT** mean "no trains exist."
+- Real trains have been missed in testing (overnight departures, newly-added services).
+- **Rule:** when FlyAI returns empty or suspiciously few results, you MUST NOT declare NO VIABLE PLAN on that basis alone. Label the output: `⚠️ FlyAI 体验模式数据可能不完整，以下结论需人工复核 12306 官方余票`. State clearly that a route may exist that the search did not surface.
+
+**2. The 12306 fallback is NOT available in unattended/server environments.**
+- `cuddle-ai/12306-skill` requires QR-code login (20s expiry) — only works when a human is present to scan.
+- `52Herts-ux/12306-smart-query` needs a local MCP service and is fragile (SSE/version issues).
+- Direct 12306 API calls are blocked by anti-scraping (`RAIL_DEVICEID`).
+- **Rule:** do not promise a 12306 fallback you cannot deliver. If FlyAI is the only working source and it returns thin data, say so explicitly rather than implying full coverage.
 
 ## Core Rule
 
 - Default ranking: lowest-risk first, then best duration/arrival fit, then price.
 - Do not book; only search and compare results.
-- If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint.
+- If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint — **but only after confirming the data source was complete** (see reliability note).
 - Station and airport names must come from FlyAI or 12306 results only — never assume or guess station names.
 - **Always display full datetime** (`YYYY-MM-DD HH:MM`) for every departure and arrival — never extract time alone. A result showing `08:20` without the date caused a critical planning error when the actual arrival was the following day.
 

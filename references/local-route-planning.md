@@ -26,6 +26,19 @@ Requires an **AMap Web Service Key** (Web服务类型).
 4. Plan the outbound local route: venue → return departure point (driving/taxi after late-night concerts).
 5. Add the 20-minute local buffer to each leg before finalizing.
 
+## Nearest-Airport / Station Map (Reuse, Don't Re-query)
+
+The return destination's nearest airports/stations are stable — cache them once per destination instead of re-geocoding every run. Build the entry on first use and reuse it.
+
+**Example entry — 泰州海陵区九龙镇 (return destination used in testing):**
+| 枢纽 | 类型 | 到九龙镇驾车 | 备注 |
+|------|------|------------|------|
+| 泰州站 (UTH) | 火车站 | ~21 min / 16.5 km | 最近，首选 |
+| 扬州泰州国际机场 (YTY) | 机场 | ~29 min / 22.6 km | 最近机场，返程航班首选 |
+| 南京禄口国际机场 (NKG) | 机场 | ~125 min / 176 km | 次选，仅当 YTY 无合适航班 |
+
+When a new return destination appears, geocode its candidate hubs once, record drive times here in the same format, and reuse on later runs. Re-verify a cached drive time only if the user flags traffic/construction changes.
+
 ---
 
 ## API Reference

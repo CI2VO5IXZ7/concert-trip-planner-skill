@@ -91,6 +91,12 @@ If the information cannot be verified with enough confidence, say so and ask the
 3. If this is a new topic with no reliable topic history, fall back to the artist's past concert durations and use the artist's historical average.
 4. Only use a default estimate after historical data search fails.
 
+### Same-Tour Duration Reuse
+A single tour (同一巡演) keeps roughly the same setlist and runtime across cities. Once you have confirmed a duration for one stop of a tour, **reuse it for other stops of the same tour** instead of re-searching every city.
+- On first confirmation, record: tour name, the duration value, the source stop it came from, and confidence.
+- For subsequent stops of the same tour, cite it as: `时长沿用本巡演 {来源场次} 数据 (~{X}h{Y}m，置信度 {level})`.
+- Only re-search if the user reports a setlist change or the venue imposes a curfew that would cut the show short.
+
 ### Search Query Templates
 - `{艺人} {主题} 演唱会 时长`
 - `{艺人} {主题} 演唱会 几点结束`

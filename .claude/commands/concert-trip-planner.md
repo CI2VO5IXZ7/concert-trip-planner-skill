@@ -31,12 +31,16 @@ If multiple concerts match, ask which one to use.
 ## Workflow
 
 1. Collect and confirm all required inputs.
-2. Search current concert information, verify venue/date/timing, and verify historical concert duration.
-3. Plan outbound major transport with the lowest-risk option first. If no direct route is feasible, or the return-side deadline is too tight/fragile, trigger reverse planning.
-4. Plan local route from arrival point to venue.
-5. Plan local route from venue to the return departure point.
-6. Plan return major transport, including extended transport modes when needed.
-7. Produce a concise itinerary with risk assessment and buffer checks.
+2. **Feasibility pre-check (快速粗判)** — before any deep search, estimate viability so you scale effort to the case:
+   - Rough distance between departure city and concert city, and whether a direct high-speed rail or flight plausibly exists.
+   - Compare concert end time + minimum return travel time against the user's deadline.
+   - Output a quick verdict: **高 / 中 / 低 可行性**. If 低 (e.g. 900+ km, no direct line, next-morning hard deadline), tell the user upfront it is likely infeasible and confirm they still want the full search before spending it.
+3. Search current concert information, verify venue/date/timing, and verify historical concert duration (reuse same-tour duration if already known).
+4. Plan outbound major transport with the lowest-risk option first. If no direct route is feasible, or the return-side deadline is too tight/fragile, trigger reverse planning.
+5. Plan local route from arrival point to venue.
+6. Plan local route from venue to the return departure point.
+7. Plan return major transport, including extended transport modes when needed.
+8. Produce a concise itinerary with risk assessment and buffer checks.
 
 ## Default Optimization Goal
 
@@ -72,12 +76,14 @@ This command depends on the following skills — invoke them in the order listed
 
 | Task | Primary Skill | Fallback |
 |------|--------------|---------|
-| 火车班次查询 | FlyAI skill (`/flyai search-train`) | 12306 skill (natural language) |
-| 航班查询 | FlyAI skill (`/flyai search-flight`) | 12306 skill |
+| 火车班次查询 | FlyAI skill (`/flyai search-train`) | 12306 skill — **仅交互式会话可用（需扫码登录）** |
+| 航班查询 | FlyAI skill (`/flyai search-flight`) | 12306 skill — 同上 |
 | 本地路线 / 地址解析 / 距离查询 | 高德地图 REST API (curl) | — (no WebSearch substitution) |
 | 演唱会信息 / 大巴班次 / 顺风车 | WebSearch | WebFetch |
 
 Station and airport names must be verified by FlyAI or 12306 results. Never assume or guess station names.
+
+**重要可靠性提醒：** FlyAI 体验模式数据可能不完整，12306 fallback 在无人值守环境不可用。当 FlyAI 返回空或结果稀少时，**不得据此直接判定无方案**，必须标注数据可能不全并提示人工复核。详见 `references/transport-search.md` 的「Data Reliability」章节。
 
 ## Must Have
 
