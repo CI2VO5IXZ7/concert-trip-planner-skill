@@ -26,6 +26,18 @@ If FlyAI returns a `体验模式` warning in results, note that output may be in
 - Do not book; only search and compare results.
 - If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint.
 - Station and airport names must come from FlyAI or 12306 results only — never assume or guess station names.
+- **Always display full datetime** (`YYYY-MM-DD HH:MM`) for every departure and arrival — never extract time alone. A result showing `08:20` without the date caused a critical planning error when the actual arrival was the following day.
+
+## Flight Search — Run in Parallel with Train Search
+
+When doing reverse planning, **search flights at the same time as trains** — do not treat flights as an afterthought. For many intercity routes, the first viable return option is a flight, not a train.
+
+Run these three searches in parallel:
+1. Trains: two-pass return search (凌晨段 + 早班段)
+2. Flights to 扬州泰州机场 (YTY) — nearest airport to Taizhou
+3. Flights to 南京禄口 (NKG) — secondary option, 125 min drive to Jiulong Town
+
+Merge all results and rank by **earliest arrival at 九龙镇**, not just arrival at terminal station/airport.
 
 ## FlyAI Skill — Train Search
 

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "12306": {
+      "source": "cuddle-ai/12306-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "5857c04ddde6e045ed9f87a70ecc9f50b432f8b36d4364843276084c971b0da7"
+    }
+  }
+}
