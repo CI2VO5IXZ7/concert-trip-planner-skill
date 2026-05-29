@@ -74,7 +74,7 @@ This command depends on the following skills — invoke them in the order listed
 |------|--------------|---------|
 | 火车班次查询 | FlyAI skill (`/flyai search-train`) | 12306 skill (natural language) |
 | 航班查询 | FlyAI skill (`/flyai search-flight`) | 12306 skill |
-| 本地路线 / 地址解析 / 距离查询 | AMap skill (高德地图) | — (no WebSearch substitution) |
+| 本地路线 / 地址解析 / 距离查询 | 高德地图 REST API (curl) | — (no WebSearch substitution) |
 | 演唱会信息 / 大巴班次 / 顺风车 | WebSearch | WebFetch |
 
 Station and airport names must be verified by FlyAI or 12306 results. Never assume or guess station names.
@@ -83,7 +83,7 @@ Station and airport names must be verified by FlyAI or 12306 results. Never assu
 
 - Live concert info search with source verification
 - Round-trip transport planning using FlyAI + 12306
-- Local venue routing using AMap skill
+- Local venue routing using 高德地图 REST API
 - Minute-by-minute itinerary output
 - Buffer checks and feasibility assessment
 - Explicit infeasible-plan handling

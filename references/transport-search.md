@@ -124,7 +124,7 @@ When direct trains and flights are unavailable or infeasible:
 
 - **顺风车**: WebSearch `{起点} 到 {终点} 顺风车 {日期}`
 - **长途大巴 / 夜巴**: WebSearch `{起点} 长途汽车站 {终点} 班次时刻` or `{起点} 到 {终点} 夜间大巴`
-- **自驾/租车**: Use AMap skill driving route to get distance and estimated drive time
+- **自驾/租车**: Use AMap REST API driving route (`/v3/direction/driving`) to get distance and estimated drive time
 - **机场/车站过夜**: WebSearch `{机场或车站名} 24小时候车区 过夜` for rules and areas
 - **多段联运**: Search each leg separately with FlyAI or 12306, then stitch by buffer
 
