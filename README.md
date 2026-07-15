@@ -1,6 +1,8 @@
 # 🎵 偷偷去看演唱会
 
-一个专为特种兵式看演唱会设计的 Claude Code 自定义命令，帮你规划最紧凑、最省心的往返行程。
+一个专为特种兵式看演唱会设计的行程规划技能，帮你规划最紧凑、最省心的往返行程。
+
+**v5.0.0** — 支持 Hermes Agent / OpenClaw / Claude Code
 
 ## 什么是特种兵行程？
 
@@ -13,10 +15,10 @@
 - **历史时长验证**：搜索同主题/同艺人过往演唱会时长，不瞎猜 2.5 小时
 - 所有信息标注来源和信心度
 
-### 2. 往返大交通规划
-- 高铁/飞机/大巴/顺风车/自驾，多种方式联动
-- **反向拼图规划**：当直达不可行时，从目的地截止时间反向搜索，拼接多段联运
-- 支持附近城市中转、机场/车站过夜
+### 2. 强制搜索矩阵（不遗漏任何维度）
+- **直达火车 + 直达航班 + 中转火车 + 飞机+地面交通** 四维度并行搜索
+- **全量碰撞找中转**：基于 train_list.js 离线索引，遍历所有车站车次取交集
+- 飞猪 flyai 实时数据（含临客），携程问道备用
 
 ### 3. 当地交通路线
 - 基于**高德地图 REST API** 的精确路线规划（公交/地铁/打车/步行）
@@ -25,130 +27,91 @@
 
 ### 4. 分钟级行程单输出
 - 从出发到回家的全程分钟级安排
-- 风险等级评估（LOW / MEDIUM / HIGH）
+- 风险等级评估（LOW / MEDIUM / HIGH / NO VIABLE）
 - 即使不可行，也会展示最早可达时间和替代建议
 
 ## 项目结构
 
 ```
 .
-├── .claude/
-│   └── commands/
-│       └── concert-trip-planner.md       # slash 命令入口
+├── SKILL.md                              # 技能主文件（Hermes/OpenClaw）
+├── .claude/commands/
+│   └── concert-trip-planner.md           # Claude Code slash 命令入口
+├── scripts/
+│   └── train_index_builder.py            # train_list.js 下载+索引构建
+├── data/                                 # 索引数据（git ignore）
+│   ├── train_list.js                     # 12306 全国列车列表
+│   ├── train_index.json                  # 倒排索引：车站→车次
+│   ├── train_by_no.json                  # 正向索引：车次→信息
+│   └── metadata.json                     # 元数据
 ├── references/
 │   ├── concert-info-search.md            # 演唱会信息搜索指南
-│   ├── transport-search.md               # 交通搜索（携程问道 API）
+│   ├── transport-search.md               # 交通搜索（flyai + 高德）
 │   ├── local-route-planning.md           # 当地路线规划（高德 REST API）
 │   ├── trip-output-template.md           # 行程单输出模板
 │   ├── risk-and-buffer-rules.md          # 风险与缓冲规则
 │   ├── extended-transport-options.md     # 扩展交通方式
-│   └── reverse-planning-strategy.md      # 反向拼图规划策略
+│   ├── reverse-planning-strategy.md      # 反向拼图规划策略
+│   └── feasibility-examples.md           # 可行性判断示例
 └── README.md
 ```
 
-## 使用方法
+## 前置条件
 
-在 Claude Code 中输入：
-
-```
-/concert-trip-planner
-```
-
-然后按提示提供：
-- 出发城市
-- 演唱会名称 + 日期
-- 最早出发时间 / 最晚到达要求
-- 返程截止时间
-- 返程目的地
-
-### 前置条件
-
-| 工具 | 安装/配置 |
-|------|---------|
-| 携程问道 Node.js 脚本 | 无需额外安装（见 ctrip-wendao skill） |
-| 高德地图 Web服务 Key | [高德开放平台](https://console.amap.com/dev/key/app) → 添加Key → 服务平台选「Web服务」 |
-
-### Agent 工作流程
-
-1. **环境检查**：确认 携程问道脚本 可用、AMap Key 已就绪
-2. **可行性粗判**：距离 + 是否有直达线 + 截止时间，先给高/中/低可行性，低可行性先告知用户
-3. **收集信息**：出发城市、演唱会名称+日期、最早出发时间、返程截止时间
-4. **搜索演唱会**：WebSearch 验证场地、日期、开场时间；**结束时间常无官方公布，多靠同巡演历史时长估算**（标注置信度）
-5. **规划去程**：携程问道搜索大交通（高铁/飞机），预留场馆缓冲
-6. **规划当地路线**：高德 REST API 查询机场/车站 → 场馆的实测路线和时间
-7. **规划返程交通**：携程问道火车双段（凌晨段+早班段）+ 飞机并行搜索，必要时反向规划
-8. **输出行程单**：分钟级安排 + 风险评估 + 不可行时给出最早可达时间
-
-> ⚠️ **数据说明**：火车/航班查询统一使用携程问道 API（携程官方数据），一般较完整；返回结果稀少时会标注"需人工复核"，不会直接判无方案。
-
-### 用户示例
-
-> "我在某城市，想去看异地演唱会，次日上午前回到出发地"
-
-Agent 会：
-1. WebSearch 验证演唱会场地和历史时长
-2. 携程问道搜索出发城市→目的地去程高铁
-3. 高德 REST API 查询到站→场馆的地铁路线（实测时间）
-4. **反向规划返程**（凌晨段 + 早班段双次搜索）：
-   - 若无直达夜间高铁，评估最早班次能否满足截止时间
-   - 尝试多段联运：目的地→中转城市（凌晨动车）→换乘高铁→自驾/打车回目的地
-5. 找到可行链条后输出完整分钟级行程单，附风险评估
-6. 若不可行，给出最早可达时间供用户判断是否放宽约束
+| 工具 | 用途 | 安装/配置 |
+|------|------|---------|
+| **flyai** | 火车/航班/酒店/景点查询 | `npm i -g @fly-ai/flyai-cli` + `FLYAI_API_KEY` |
+| **train_list.js 索引** | 某站所有车次（全量碰撞） | `python3 scripts/train_index_builder.py` |
+| **高德地图** | 本地路线规划 | [高德开放平台](https://console.amap.com/dev/key/app) → Web服务 Key → `GAODE_API_KEY` |
+| **携程问道** | 备用：经停站查询 | 见 ctrip-wendao skill（30次/天） |
 
 ## 工具栈
 
-| 工具 | 用途 |
-|------|------|
-| **携程问道 API** | 火车/航班实时搜索，携程官方数据源 |
-| **高德地图 REST API** | 地理编码、驾车/公交路线规划，实测距离和时间 |
-| **WebSearch / WebFetch** | 演唱会信息、顺风车、大巴班次等补充搜索 |
+| 工具 | 用途 | 限额 |
+|------|------|------|
+| **flyai (飞猪)** | 火车/航班实时搜索（含中转推荐） | 100次/天 |
+| **train_list.js 索引** | 某站所有车次 → 全量碰撞找中转 | 无限（静态） |
+| **高德地图 REST API** | 地理编码、驾车/公交路线规划 | 无限 |
+| **携程问道 API** | 备用：经停站查询、航班补充 | 30次/天 |
+| **WebSearch** | 演唱会信息、顺风车、大巴 | 无限 |
 
-## 文件说明
+## Agent 工作流程
 
-### .claude/commands/concert-trip-planner.md
-slash 命令主入口，定义工作流程、环境检查、输入要求、优化目标、缓冲规则、Must Have / Must NOT Have。
-
-### references/transport-search.md
-交通搜索指南。携程问道 API 统一查询火车/航班。**返程强制双段搜索**（凌晨段 + 早班段），防止漏掉演唱会后的关键班次。
-
-### references/local-route-planning.md
-当地路线规划指南。基于高德 Web服务 REST API（`/v3/geocode/geo`、`/v3/direction/driving`、`/v3/direction/transit`），含完整 curl 调用模板。
-
-### references/concert-info-search.md
-演唱会信息搜索指南。包含历史时长搜索策略，以及用户直接提供信息时的处理规范。
-
-### references/risk-and-buffer-rules.md
-风险与缓冲规则。定义固定缓冲，风险分级（LOW/MEDIUM/HIGH/NO VIABLE），不可行时强制输出最早可达时间。
-
-### references/extended-transport-options.md
-扩展交通方式：火车/飞机/顺风车/自驾/夜间大巴/机场过夜/车站过夜/多段联运，明确排除包车/专车。
-
-### references/reverse-planning-strategy.md
-反向拼图规划策略。从返程截止时间反向锁定可行链条，返程优先原则，中转城市选择规则。
-
-### references/trip-output-template.md
-行程单输出模板，含分钟级时间轴、风险摘要、来源引用、不可行处理模板。
+1. **环境检查**：确认 flyai 可用、train 索引已建、高德 Key 就绪
+2. **可行性粗判**：距离 + 是否有直达线 + 截止时间，先给高/中/低可行性
+3. **收集信息**：出发城市、演唱会名称+日期、返程截止时间
+4. **搜索演唱会**：WebSearch 验证场地、日期、开场时间
+5. **执行搜索矩阵**（四维度并行，不可遗漏）：
+   - ① 直达火车（flyai）
+   - ② 直达航班（flyai）
+   - ③ 中转火车（train_list.js 碰撞 + flyai 验证）
+   - ④ 飞机+地面交通（flyai + 高德）
+6. **规划当地路线**：高德 REST API 查询实测路线和时间
+7. **输出行程单**：分钟级安排 + 风险评估
 
 ## 开发历程
 
 ### v1.0 / v2.0（2026-05-28 ~ 05-29）
-基础功能搭建：演唱会搜索、往返交通规划、当地路线、分钟级行程单、历史时长搜索、扩展交通方式、反向拼图规划。
+基础功能搭建：演唱会搜索、往返交通规划、当地路线、分钟级行程单。
 
 ### v3.0（2026-05-29）
-适配 Claude Code：入口改为 `.claude/commands/` slash 命令，工具层重写。
+适配 Claude Code：入口改为 `.claude/commands/` slash 命令。
 
-### v3.1（2026-05-29）
-经模拟测试发现并修复的问题：
-- 火车/航班查询从 WebSearch 改为 **携程问道 API**（携程官方数据，消除站名幻觉问题）
-- 本地路线从估算改为 **高德 REST API** 实测（明确 Web服务 Key 要求）
-- 返程搜索改为**凌晨 + 早班双段强制执行**，防止漏掉关键班次
-- No-Viable-Plan 时强制输出**最早可达时间**
-- 新增用户直接提供演唱会信息的处理规范
+### v4.0（2026-07-15）
+- 引入强制搜索矩阵，四维度并行搜索
+- 新增全量碰撞找中转逻辑
+
+### v5.0（2026-07-15）
+- **工具栈重构**：flyai (飞猪) 替代携程问道/12306-skill
+- **train_list.js 索引**：支持全量碰撞找中转点
+- **限额优化**：飞猪100次/天，携程问道仅备用（30次/天）
+- **移除12306-skill依赖**：12306 API 有反爬，改用飞猪实时数据
+- 适配 Hermes Agent SKILL.md 格式
 
 ## 使用限制
 
-- 需在 Claude Code 环境中使用
-- 需要携程问道脚本（ctrip-wendao skill）和高德 Web服务 Key
+- 需要 flyai CLI + FLYAI_API_KEY
+- 需要高德 Web服务 Key
 - 不处理购票/订酒店等交易操作
 - 不提供吃喝玩乐推荐
 - 搜索结果不保证实时准确，以官方渠道为准

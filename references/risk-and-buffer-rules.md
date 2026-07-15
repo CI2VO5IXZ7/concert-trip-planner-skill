@@ -51,10 +51,21 @@ Use this structure:
 > **REJECT / NO VIABLE PLAN**
 > - Reason: <short factual reason>
 > - Failed constraint: <which buffer / timing / route constraint fails>
+> - **All options ranked by earliest arrival:**
+>
+> | 方案 | 出发 | 到达 | 最早到达时间 | 风险 |
+> |---|---|---|---|---|
+> | <option 1> | ... | ... | ... | ... |
+> | <option 2> | ... | ... | ... | ... |
+>
 > - **Earliest viable arrival: XX:XX** via <方案简述> — 供参考，如可放宽截止时间可采用此方案
 > - Safe next step: <what user must change to make a plan possible; try widening the return window or considering nearby-city transfers>
 
 **Earliest viable arrival is mandatory.** After declaring no-viable-plan, always calculate and state the earliest time the user *could* arrive at the destination under any safe transport combination, even if it exceeds their deadline. This lets the user decide whether to relax the constraint rather than having to ask.
+
+**All options must be listed.** Even when declaring NO VIABLE, present every possible方案 in a table ranked by earliest arrival time. Include self-drive with AMap-estimated duration. This gives the user full information to decide (e.g., accept fatigue risk, accept late arrival, or change constraints).
+
+**User rejects a方案时** — 如果用户拒绝了某个方案（如提前离场），不要重复推荐。转而列出演唱会结束后出发的所有方案，按最早到达排序。
 
 ## No-Fabrication Guardrail
 
@@ -96,7 +107,7 @@ Use this structure:
 ## Reverse Planning Trigger
 
 - 当满足以下任一条件时，自动启动反向规划（参考 `reverse-planning-strategy.md`）：
-  - 携程问道搜索不到直达车次/航班
+  - flyai 搜索不到直达车次/航班
   - 用户返程时间窗口极紧（< 演唱会结束时间 + 4小时）
   - 演唱会城市与目的地之间无直达高铁/航班
 - 触发后：优先搜索返程，再规划去程

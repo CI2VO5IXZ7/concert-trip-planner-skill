@@ -1,131 +1,175 @@
 # Transport Search Reference
 
-Use 携程问道 (TripAI) API for all major transport searches (train + flight). Search outbound and return as separate passes. Always choose the lowest-risk option first.
+Use **flyai (飞猪)** for all major transport searches (train + flight). Search outbound and return as separate passes. Always choose the lowest-risk option first.
 
-## Environment Check
-
-Before any search, verify 携程问道 is available:
-```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js --help 2>&1 || echo "需确认脚本存在"
-```
-
-如有需要，可申请 API Key 配置到 `.env` 中（`TRIPAI_API_KEY`）。不配也能用，但可能被限流。
-
-## Tool Priority
-
-1. **携程问道 API** — primary, covers 火车/高铁/航班/景点门票/一日游等全部旅行场景
-2. **WebSearch** — last resort only, for supplementary info (bus schedules, ride share); never use for train/flight station name verification
-
-## ⚠️ Data Reliability — Read First
-
-携程问道的数据来自携程官方，一般较完整。但仍需注意：
-
-**Rule:** 当携程问道返回空或结果异常少时，你 MUST NOT 直接判 NO VIABLE PLAN。标注输出：`⚠️ 携程问道返回数据可能不完整，以下结论需人工复核 12306/航司官方余票`。
-
-## Core Rule
-
-- Default ranking: lowest-risk first, then best duration/arrival fit, then price.
-- Do not book; only search and compare results.
-- If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint — **but only after confirming the data source was complete**.
-- Station and airport names must come from 携程问道 results only — never assume or guess station names.
-- **Always display full datetime** (`YYYY-MM-DD HH:MM`) for every departure and arrival — never extract time alone.
-
-## Flight Search — Run in Parallel with Train Search
-
-When doing reverse planning, **search flights at the same time as trains** — do not treat flights as an afterthought. For many intercity routes, the first viable return option is a flight, not a train.
-
-Run these searches in parallel:
-1. Trains: two-pass return search (凌晨段 + 早班段)
-2. Flights to the nearest airport to the return destination
-3. Flights to secondary airports (if any, check drive time to final destination)
-
-Merge all results and rank by **earliest arrival at final destination**, not just arrival at terminal station/airport.
-
-## 携程问道 — Train Search
+## Environment
 
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {出发城市/站} 到 {目的地城市/站} 的高铁/动车，{出发时间} 出发，按出发时间排序"
+# 飞猪 flyai CLI — 火车/航班查询（每日100次限额）
+flyai --help 2>&1 | head -3
+echo "FLYAI_API_KEY set: ${FLYAI_API_KEY:+yes}"
+
+# train_list.js 索引 — 某站所有车次（无限，静态）
+python3 scripts/train_index_builder.py 2>&1 | head -3
+
+# 高德地图 — 本地路线（无限）
+echo "GAODE_API_KEY set: ${GAODE_API_KEY:+yes}"
 ```
 
-### Outbound train example
+## Station and Airport Names
+
+Use flyai results to get accurate station names. flyai returns structured data with station codes and names:
+```json
+{
+  "depStationCode": "VNP",
+  "depStationName": "北京南站",
+  "arrStationCode": "WGH",
+  "arrStationName": "无锡东站"
+}
+```
+
+For station code lookup (if needed without flyai), fetch from 12306 directly:
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "2026-07-15 南京 到 泰州 的高铁，08:00到14:00之间出发，按出发时间排序"
+curl -s "https://kyfw.12306.cn/otn/resources/js/framework/station_name.js" | grep "北京"
 ```
 
-### Return train — Two-Pass Mandatory Rule
+## Train Search
 
-**Return searches MUST be executed as two separate passes and results merged:**
+Use flyai `search-train` command. Supports filtering by time, seat class, price, and sorting.
 
-**Pass 1 — 凌晨段 (midnight to 6am):**
+**flyai search-train 参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `--origin` | 出发城市/车站 **(必填)** |
+| `--destination` | 到达城市/车站 |
+| `--dep-date` | 出发日期 (YYYY-MM-DD) |
+| `--dep-hour-start/end` | 出发时间范围 (24h) |
+| `--arr-hour-start/end` | 到达时间范围 (24h) |
+| `--journey-type` | 1=直达, 2=中转 |
+| `--seat-class-name` | 坐席: second class, first class, business class, hard sleeper, soft sleeper |
+| `--sort-type` | 1=价格降 2=推荐 3=价格升 4=耗时升 5=耗时降 6=出发早 7=出发晚 8=直达优先 |
+| `--max-price` | 最高价 (元) |
+| `--total-duration-hour` | 最大总时长 (小时) |
+
+**示例：**
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {返程出发城市} 到 {返程目的地} 的火车，凌晨0点到6点之间出发"
+# 直达：北京→无锡，12-16点出发，按出发时间排序
+flyai search-train --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --dep-hour-start 12 --dep-hour-end 16 --sort-type 6
+
+# 中转：自动推荐中转方案
+flyai search-train --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --journey-type 2 --sort-type 6
+
+# 夜车：22点后出发
+flyai search-train --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --dep-hour-start 22 --sort-type 6
 ```
 
-**Pass 2 — 早班段 (6am to noon):**
+### 特种兵返程：演唱会后搜索策略
+
+演唱会结束后，需要搜索所有可能的返程交通。分两段搜索：
+
+**凌晨段（演唱会结束 → 次日6点）：**
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {返程出发城市} 到 {返程目的地} 的高铁，06:00到12:00之间出发，按出发时间排序"
+flyai search-train --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --dep-hour-start 22 --sort-type 6
 ```
 
-After both passes complete, merge all results and sort by arrival time at destination. **Skipping Pass 1 will miss critical overnight trains** (e.g. D128 01:29, K558 00:18) that are often the earliest viable option after a late-night concert.
+**早班段（次日6点 → 截止时间）：**
+```bash
+flyai search-train --origin "北京" --destination "无锡" --dep-date 2026-08-24 \
+  --dep-hour-start 6 --arr-hour-end 12 --sort-type 6
+```
 
-## 携程问道 — Flight Search
+## Flight Search
+
+Use flyai `search-flight` command. Similar parameters to train search.
+
+**flyai search-flight 参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `--origin` | 出发城市/机场 **(必填)** |
+| `--destination` | 到达城市/机场 |
+| `--dep-date` | 出发日期 (YYYY-MM-DD) |
+| `--dep-hour-start/end` | 出发时间范围 (24h) |
+| `--journey-type` | 1=直达, 2=中转 |
+| `--seat-class-name` | 舱位: economy, business, first |
+| `--sort-type` | 1=价格降 2=推荐 3=价格升 4=耗时升 5=耗时降 6=出发早 7=出发晚 8=直达优先 |
+| `--max-price` | 最高价 (元) |
+
+**示例：**
+```bash
+# 直达航班
+flyai search-flight --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --sort-type 3
+
+# 深夜航班（演唱会后）
+flyai search-flight --origin "北京" --destination "无锡" --dep-date 2026-08-23 \
+  --dep-hour-start 22 --sort-type 6
+
+# 附近机场
+flyai search-flight --origin "北京" --destination "南京" --dep-date 2026-08-24 \
+  --dep-hour-start 6 --sort-type 6
+```
+
+## 多机场搜索
+
+大城市通常有多个机场，必须同时搜索：
+```bash
+# 北京出发：首都机场 + 大兴机场
+flyai search-flight --origin "北京" --destination "无锡" --dep-date 2026-08-23
+
+# 附近目的地机场
+flyai search-flight --origin "北京" --destination "南京" --dep-date 2026-08-23
+flyai search-flight --origin "北京" --destination "常州" --dep-date 2026-08-23
+```
+
+flyai 会自动搜索该城市所有机场的航班。
+
+## 中转火车全量碰撞
+
+当直达方案不可行时，用 train_list.js 索引做全量碰撞：
 
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {出发城市} 到 {目的地城市} 的航班，{出发时间} 出发"
+# Step A: 查询出发城市所有车站的车次
+python3 scripts/train_index_builder.py --query "北京南"
+python3 scripts/train_index_builder.py --query "北京"
+python3 scripts/train_index_builder.py --query "北京西"
+
+# Step B: 查询目的地所有车站的车次
+python3 scripts/train_index_builder.py --query "无锡"
+python3 scripts/train_index_builder.py --query "无锡东"
+
+# Step C: 交叉匹配 → 得到候选中转城市
+
+# Step D: 逐个验证
+flyai search-train --origin "北京" --destination "南京" --dep-date 2026-08-23 --dep-hour-start 22
+flyai search-train --origin "南京" --destination "无锡" --dep-date 2026-08-24 --arr-hour-end 9
 ```
 
-### Flight example
+## 扩展交通方式
+
+当火车和飞机都不可行时，搜索替代方案：
+
+**顺风车 / 大巴：**
 ```bash
-node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "2026-07-15 上海 到 南京 的航班，05:00到09:00之间出发"
+# 用 web_search 搜索
+web_search("北京到无锡 顺风车 8月23日晚上")
+web_search("北京到无锡 大巴 夜班")
 ```
 
-## Ranking Logic
+**自驾：**
+```bash
+# 用高德计算距离和时间
+curl -s "https://restapi.amap.com/v3/direction/driving?origin={起点坐标}&destination={终点坐标}&key=$GAODE_API_KEY"
+```
 
-1. Lowest-risk option first: the itinerary that best satisfies all buffers and time windows.
-2. Then duration and arrival fit: prefer the option that lands closest to the needed arrival window without violating it.
-3. Then price: only use price to break ties after risk and timing.
+## Reliability Notes
 
-## Buffer Coordination
-
-- Venue buffer: arrive at venue at least **60 minutes** before show start.
-- Airport buffer: arrive at airport at least **90 minutes** before departure.
-- Train station buffer: arrive at station at least **45 minutes** before departure.
-- Local route buffer: keep **20 minutes** for last-mile transfer.
-
-Coordinate the transport search with the venue plan:
-- Outbound arrival must leave time for local transit plus the venue buffer.
-- Return departure must leave time for local egress plus the station/airport buffer.
-- If the concert end time is uncertain, use the estimate plus the venue buffer before choosing a return option.
-
-## No-Viable-Plan Behavior
-
-If nothing matches the constraints:
-- Say the trip is infeasible for the requested windows.
-- Identify the failing constraint.
-- Trigger reverse planning (see `reverse-planning-strategy.md`).
-- Try extended transport modes (see `extended-transport-options.md`).
-- Ask for a wider time window or a relaxed constraint before searching again.
-
-## Extended Transport Modes
-
-When direct trains and flights are unavailable or infeasible:
-
-- **顺风车**: WebSearch `{起点} 到 {终点} 顺风车 {日期}`
-- **长途大巴 / 夜巴**: WebSearch `{起点} 长途汽车站 {终点} 班次时刻` or `{起点} 到 {终点} 夜间大巴`
-- **自驾/租车**: Use AMap REST API driving route (`/v3/direction/driving`) to get distance and estimated drive time
-- **机场/车站过夜**: WebSearch `{机场或车站名} 24小时候车区 过夜` for rules and areas
-- **多段联运**: Search each leg separately with 携程问道, then stitch by buffer
-
-See `extended-transport-options.md` for full guidance on each mode.
-
-## Fallback Strategy: When No Direct Route Is Found
-
-1. Loosen search constraints: widen time window, try nearby stations/airports via 携程问道 (`"{城市} 附近有哪些高铁站"`).
-2. Start reverse planning — see `reverse-planning-strategy.md`.
-3. Consider extended transport modes — see `extended-transport-options.md`.
-4. If all options remain infeasible, clearly explain which constraint failed and why.
-
-## Reverse Planning Trigger
-
-- When the return-time window is extremely tight, run the return search first.
-- Return-first principle: confirm whether arrival before the deadline is possible before optimizing the outbound leg.
+1. **flyai 返回空结果** — 不要直接判无方案，标注数据可能不完整并提示人工复核。
+2. **flyai 体验模式** — 未设置 FLYAI_API_KEY 时返回的结果可能受限（价格显示为"5xx"），必须设置 API Key。
+3. **中转方案验证** — flyai 返回的中转方案需要验证换乘时间是否充足（同站≥15分钟，跨站≥实测交通时间+15分钟）。
+4. **train_list.js 索引** — 索引基于12306静态数据，调图时更新（通常季度/半年）。索引只包含车次的起点和终点，不包含经停站。如需查询经停站，需用携程问道。
