@@ -96,7 +96,7 @@ Use this structure:
 ## Reverse Planning Trigger
 
 - 当满足以下任一条件时，自动启动反向规划（参考 `reverse-planning-strategy.md`）：
-  - FlyAI 搜索不到直达车次/航班
+  - 携程问道搜索不到直达车次/航班
   - 用户返程时间窗口极紧（< 演唱会结束时间 + 4小时）
   - 演唱会城市与目的地之间无直达高铁/航班
 - 触发后：优先搜索返程，再规划去程

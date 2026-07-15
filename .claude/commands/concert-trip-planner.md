@@ -59,8 +59,8 @@ Default to **lowest risk first**, not cheapest or fastest. (特种兵精神: 不
 Before collecting user inputs, verify all required tools are available:
 
 ```bash
-# 1. FlyAI
-flyai --help || npm i -g @fly-ai/flyai-cli
+# 1. 携程问道 (TripAI)
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js --help 2>&1 || echo "需确认脚本存在"
 
 # 2. AMap Key
 # Ask the user: "请提供高德地图 Web服务 Key（非JSAPI Key）"
@@ -68,7 +68,7 @@ flyai --help || npm i -g @fly-ai/flyai-cli
 # If user provides a JSAPI key, error 10009 will appear — ask them to create a Web服务 Key instead
 ```
 
-If FlyAI search results include a `体验模式` warning, inform the user that results may be incomplete.
+携程问道 API Key 可选（`TRIPAI_API_KEY`），不配也能用但可能被限流。
 
 ## Required Skills
 
@@ -76,14 +76,14 @@ This command depends on the following skills — invoke them in the order listed
 
 | Task | Primary Skill | Fallback |
 |------|--------------|---------|
-| 火车班次查询 | FlyAI skill (`/flyai search-train`) | 12306 skill — **仅交互式会话可用（需扫码登录）** |
-| 航班查询 | FlyAI skill (`/flyai search-flight`) | 12306 skill — 同上 |
+| 火车班次查询 | 携程问道 API (`node wendao_query.js`) | — |
+| 航班查询 | 携程问道 API (`node wendao_query.js`) | — |
 | 本地路线 / 地址解析 / 距离查询 | 高德地图 REST API (curl) | — (no WebSearch substitution) |
 | 演唱会信息 / 大巴班次 / 顺风车 | WebSearch | WebFetch |
 
-Station and airport names must be verified by FlyAI or 12306 results. Never assume or guess station names.
+Station and airport names must be verified by 携程问道 results. Never assume or guess station names.
 
-**重要可靠性提醒：** FlyAI 体验模式数据可能不完整，12306 fallback 在无人值守环境不可用。当 FlyAI 返回空或结果稀少时，**不得据此直接判定无方案**，必须标注数据可能不全并提示人工复核。详见 `references/transport-search.md` 的「Data Reliability」章节。
+**重要可靠性提醒：** 携程问道数据来自携程官方，一般较完整。但返回空或结果稀少时，**不得据此直接判定无方案**，必须标注数据可能不全并提示人工复核。详见 `references/transport-search.md` 的「Data Reliability」章节。
 
 ## Must Have
 

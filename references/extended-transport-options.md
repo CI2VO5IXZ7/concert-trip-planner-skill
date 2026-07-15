@@ -10,7 +10,7 @@ This is a reference for 特种兵行程的扩展交通方式. Focus: fast, cheap
 
 - 包含: 高铁 / 动车 / 普快 / 夜车硬座 or 硬卧 when needed.
 - Usage: 适合 city-to-city 主干线, especially when airport access is weak or station is closer to the venue.
-- Search method: 优先查官方 12306 / FlyAI train search / 平台余票. Filter by departure window, arrival window, and seat class.
+- Search method: 携程问道 API 查询火车/高铁（自然语言），Filter by departure window, arrival window, and seat class.
 - Pros: 稳定、准点率高、city center access 好、可中途补觉.
 - Cons: 旺季抢票难, late-night seats may be limited, long routes can be tiring.
 - Notes: Keep the station buffer in mind; if it is a long transfer, prefer earlier arrival.
@@ -18,7 +18,7 @@ This is a reference for 特种兵行程的扩展交通方式. Focus: fast, cheap
 ### Flight
 
 - Usage: 长距离跨城, time first, cost second.
-- Search method: FlyAI flight search / official airline app / OTA compare. Check departure time, arrival time, baggage rules, and airport transfer time.
+- Search method: 携程问道 API 查询航班（自然语言）/ official airline app / OTA compare. Check departure time, arrival time, baggage rules, and airport transfer time.
 - Pros: 最快覆盖长距离, good for same-day cross-region trips.
 - Cons: 安检 + 候机 + 延误 risk, airport access can be costly at night.
 - Notes: For tight plans, only choose when the airport buffer is realistic.

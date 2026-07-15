@@ -1,47 +1,34 @@
 # Transport Search Reference
 
-Use FlyAI skill (primary) and 12306 skill (fallback) for all major transport searches. Search outbound and return as separate passes. Always choose the lowest-risk option first.
+Use 携程问道 (TripAI) API for all major transport searches (train + flight). Search outbound and return as separate passes. Always choose the lowest-risk option first.
 
 ## Environment Check
 
-Before any search, verify FlyAI is available:
+Before any search, verify 携程问道 is available:
 ```bash
-flyai --help
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js --help 2>&1 || echo "需确认脚本存在"
 ```
-If not found, install it first:
-```bash
-npm i -g @fly-ai/flyai-cli
-```
-If FlyAI returns a `体验模式` warning in results, note that output may be incomplete — inform the user and suggest obtaining a full API key at https://flyai.open.fliggy.com/
+
+如有需要，可申请 API Key 配置到 `.env` 中（`TRIPAI_API_KEY`）。不配也能用，但可能被限流。
 
 ## Tool Priority
 
-1. **FlyAI CLI** (`flyai search-train` / `flyai search-flight`) — primary, real-time data, verified station names
-2. **12306 skill** — fallback **only in an interactive session where the user can scan a QR code to log in**. See the reliability note below.
-3. **WebSearch** — last resort only, for supplementary info (bus schedules, ride share); never use for train/flight station name verification
+1. **携程问道 API** — primary, covers 火车/高铁/航班/景点门票/一日游等全部旅行场景
+2. **WebSearch** — last resort only, for supplementary info (bus schedules, ride share); never use for train/flight station name verification
 
 ## ⚠️ Data Reliability — Read First
 
-Two hard-learned limits that change how you must report results:
+携程问道的数据来自携程官方，一般较完整。但仍需注意：
 
-**1. FlyAI 体验模式 (trial mode) returns incomplete data.**
-- Empty results (`智慧交通结果为空`) or single-digit result counts do **NOT** mean "no trains exist."
-- Real trains have been missed in testing (overnight departures, newly-added services).
-- **Rule:** when FlyAI returns empty or suspiciously few results, you MUST NOT declare NO VIABLE PLAN on that basis alone. Label the output: `⚠️ FlyAI 体验模式数据可能不完整，以下结论需人工复核 12306 官方余票`. State clearly that a route may exist that the search did not surface.
-
-**2. The 12306 fallback is NOT available in unattended/server environments.**
-- `cuddle-ai/12306-skill` requires QR-code login (20s expiry) — only works when a human is present to scan.
-- `52Herts-ux/12306-smart-query` needs a local MCP service and is fragile (SSE/version issues).
-- Direct 12306 API calls are blocked by anti-scraping (`RAIL_DEVICEID`).
-- **Rule:** do not promise a 12306 fallback you cannot deliver. If FlyAI is the only working source and it returns thin data, say so explicitly rather than implying full coverage.
+**Rule:** 当携程问道返回空或结果异常少时，你 MUST NOT 直接判 NO VIABLE PLAN。标注输出：`⚠️ 携程问道返回数据可能不完整，以下结论需人工复核 12306/航司官方余票`。
 
 ## Core Rule
 
 - Default ranking: lowest-risk first, then best duration/arrival fit, then price.
 - Do not book; only search and compare results.
-- If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint — **but only after confirming the data source was complete** (see reliability note).
-- Station and airport names must come from FlyAI or 12306 results only — never assume or guess station names.
-- **Always display full datetime** (`YYYY-MM-DD HH:MM`) for every departure and arrival — never extract time alone. A result showing `08:20` without the date caused a critical planning error when the actual arrival was the following day.
+- If no option satisfies the constraints, report that the plan is infeasible and name the failed constraint — **but only after confirming the data source was complete**.
+- Station and airport names must come from 携程问道 results only — never assume or guess station names.
+- **Always display full datetime** (`YYYY-MM-DD HH:MM`) for every departure and arrival — never extract time alone.
 
 ## Flight Search — Run in Parallel with Train Search
 
@@ -54,24 +41,15 @@ Run these three searches in parallel:
 
 Merge all results and rank by **earliest arrival at 九龙镇**, not just arrival at terminal station/airport.
 
-## FlyAI Skill — Train Search
+## 携程问道 — Train Search
 
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {出发城市/站} 到 {目的地城市/站} 的高铁/动车，{出发时间} 出发，按出发时间排序"
 ```
-/flyai search-train --origin {出发城市/站} --destination {目的地城市/站} --dep-date {YYYY-MM-DD}
-```
-
-Optional parameters:
-- `--journey-type 1` for direct only
-- `--sort-type 6` for earliest departure first; `--sort-type 3` for price low→high
-- `--dep-hour-start {HH}` / `--dep-hour-end {HH}` to filter departure window
-- `--arr-hour-start {HH}` / `--arr-hour-end {HH}` to filter arrival window
-- `--total-duration-hour {N}` to cap total travel time
-- `--max-price {N}` for price ceiling
-- `--seat-class-name "second class"` for seat class preference
 
 ### Outbound train example
-```
-/flyai search-train --origin {出发城市} --destination {目的地城市} --dep-date {YYYY-MM-DD} --sort-type 6 --dep-hour-start 08 --dep-hour-end 14 --arr-hour-end 18
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "2026-07-15 南京 到 泰州 的高铁，08:00到14:00之间出发，按出发时间排序"
 ```
 
 ### Return train — Two-Pass Mandatory Rule
@@ -79,43 +57,26 @@ Optional parameters:
 **Return searches MUST be executed as two separate passes and results merged:**
 
 **Pass 1 — 凌晨段 (midnight to 6am):**
-```
-/flyai search-train --origin {返程出发城市} --destination {返程目的地} --dep-date {日期} --sort-type 8 --dep-hour-start 0 --dep-hour-end 6
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {返程出发城市} 到 {返程目的地} 的火车，凌晨0点到6点之间出发"
 ```
 
 **Pass 2 — 早班段 (6am to noon):**
-```
-/flyai search-train --origin {返程出发城市} --destination {返程目的地} --dep-date {日期} --sort-type 6 --dep-hour-start 6 --dep-hour-end 12
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {返程出发城市} 到 {返程目的地} 的高铁，06:00到12:00之间出发，按出发时间排序"
 ```
 
 After both passes complete, merge all results and sort by arrival time at destination. **Skipping Pass 1 will miss critical overnight trains** (e.g. D128 01:29, K558 00:18) that are often the earliest viable option after a late-night concert.
 
-## FlyAI Skill — Flight Search
+## 携程问道 — Flight Search
 
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "{日期} {出发城市} 到 {目的地城市} 的航班，{出发时间} 出发"
 ```
-/flyai search-flight --origin {出发城市/机场} --destination {目的地城市/机场} --dep-date {YYYY-MM-DD}
-```
-
-Optional parameters mirror train search (no `--seat-class-name`).
 
 ### Flight example
-```
-/flyai search-flight --origin {出发城市} --destination {目的地城市} --dep-date {YYYY-MM-DD} --sort-type 6 --dep-hour-start 05 --dep-hour-end 09
-```
-
-## 12306 Skill — Fallback Queries
-
-When FlyAI returns no results or the connection is unavailable, use 12306 skill with natural language:
-
-```
-帮我查 {日期} {出发站} 到 {到达站} 的高铁/动车，按出发时间早→晚排序
-帮我查 {日期} {出发站} 到 {到达站}，{HH:00} 到 {HH:00} 之间出发的班次
-```
-
-### 12306 fallback examples
-```
-帮我查 {日期} {出发站} 到 {到达站} 的高铁，出发时间06:00到10:00之间，按出发时间排序
-帮我查 {日期} {出发站} 到 {到达站} 的高铁，上午所有班次
+```bash
+node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js "2026-07-15 上海 到 南京 的航班，05:00到09:00之间出发"
 ```
 
 ## Ranking Logic
@@ -153,13 +114,13 @@ When direct trains and flights are unavailable or infeasible:
 - **长途大巴 / 夜巴**: WebSearch `{起点} 长途汽车站 {终点} 班次时刻` or `{起点} 到 {终点} 夜间大巴`
 - **自驾/租车**: Use AMap REST API driving route (`/v3/direction/driving`) to get distance and estimated drive time
 - **机场/车站过夜**: WebSearch `{机场或车站名} 24小时候车区 过夜` for rules and areas
-- **多段联运**: Search each leg separately with FlyAI or 12306, then stitch by buffer
+- **多段联运**: Search each leg separately with 携程问道, then stitch by buffer
 
 See `extended-transport-options.md` for full guidance on each mode.
 
 ## Fallback Strategy: When No Direct Route Is Found
 
-1. Loosen search constraints: widen time window, try nearby stations/airports via 12306 skill (`帮我查 {城市} 附近有哪些高铁站`).
+1. Loosen search constraints: widen time window, try nearby stations/airports via 携程问道 (`"{城市} 附近有哪些高铁站"`).
 2. Start reverse planning — see `reverse-planning-strategy.md`.
 3. Consider extended transport modes — see `extended-transport-options.md`.
 4. If all options remain infeasible, clearly explain which constraint failed and why.
