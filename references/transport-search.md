@@ -34,12 +34,12 @@ node ~/.hermes/skills/productivity/ctrip-wendao/scripts/wendao_query.js --help 2
 
 When doing reverse planning, **search flights at the same time as trains** — do not treat flights as an afterthought. For many intercity routes, the first viable return option is a flight, not a train.
 
-Run these three searches in parallel:
+Run these searches in parallel:
 1. Trains: two-pass return search (凌晨段 + 早班段)
-2. Flights to 扬州泰州机场 (YTY) — nearest airport to Taizhou
-3. Flights to 南京禄口 (NKG) — secondary option, 125 min drive to Jiulong Town
+2. Flights to the nearest airport to the return destination
+3. Flights to secondary airports (if any, check drive time to final destination)
 
-Merge all results and rank by **earliest arrival at 九龙镇**, not just arrival at terminal station/airport.
+Merge all results and rank by **earliest arrival at final destination**, not just arrival at terminal station/airport.
 
 ## 携程问道 — Train Search
 

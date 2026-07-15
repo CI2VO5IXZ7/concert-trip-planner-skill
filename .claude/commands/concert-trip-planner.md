@@ -88,7 +88,7 @@ Station and airport names must be verified by 携程问道 results. Never assume
 ## Must Have
 
 - Live concert info search with source verification
-- Round-trip transport planning using FlyAI + 12306
+- Round-trip transport planning using 携程问道 API
 - Local venue routing using 高德地图 REST API
 - Minute-by-minute itinerary output
 - Buffer checks and feasibility assessment
